@@ -9,7 +9,9 @@ export const config = {
 };
 
 export default function handler(req, res) {
-  const setCors = () => {
+  const setCors = (proxyHeaders = {}) => {
+    // Para solicitações CORS, se o Origin estiver presente, refleti-lo é a única
+    // forma segura de permitir credentials. Caso contrário, fallback restrito.
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
@@ -18,11 +20,19 @@ export default function handler(req, res) {
     if (reqHeaders) {
       res.setHeader('Access-Control-Allow-Headers', reqHeaders);
     } else {
-      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Target-Url, Accept, Origin, User-Agent');
     }
     
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Expose-Headers', '*');
+    
+    // Expose-Headers usando '*' não funciona com Credentials ativado em muitos browsers
+    // Portanto repassamos todas as chaves do site original explicitamente
+    const exposeHeaders = Object.keys(proxyHeaders).filter(h => !h.toLowerCase().startsWith('access-control-'));
+    if (exposeHeaders.length > 0) {
+      res.setHeader('Access-Control-Expose-Headers', exposeHeaders.join(', '));
+    } else {
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Disposition, X-Target-Url');
+    }
   };
 
   if (req.method === 'OPTIONS') {
@@ -124,7 +134,7 @@ export default function handler(req, res) {
   }
 
   const proxyReq = requestModule.request(options, (proxyRes) => {
-    setCors();
+    setCors(proxyRes.headers);
     
     // Repassa o código de status
     res.statusCode = proxyRes.statusCode;
