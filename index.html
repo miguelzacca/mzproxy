@@ -86,13 +86,6 @@
       &nbsp;&nbsp;}<br>
       })
     </div>
-
-    <script>
-      fetch(`/api/proxy/${encodeURIComponent('https://www.google.com/search?q=miguel+zacca&sourceid=chrome&ie=UTF-8')}`)
-        .then(res => res.text())
-        .then(data => document.documentElement.innerHTML = data)
-        .catch(err => console.error('Erro:', err));
-    </script>
   </div>
 
 
