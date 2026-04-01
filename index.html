@@ -76,7 +76,7 @@
     </div>
 
     <p style="text-align: left;">
-      <strong>Alternativa:</strong> Envie o cabeçalho <code>x-target-url</code> com a URL de destino.
+      <strong>Alternativa Seguro para URLs longas:</strong> Envie o cabeçalho <code>x-target-url</code>.
     </p>
 
     <div class="code-block" style="color: #43aa8b;">
@@ -88,10 +88,10 @@
     </div>
 
     <script>
-      fetch('/api/proxy/https://www.google.com/search?q=miguel+zacca&oq=miguel+zacca&gs_lcrp=EgZjaHJvbWUqCAgAEEUYJxg7MggIABBFGCcYOzIHCAEQLhiABDIGCAIQIxgnMgcIAxAuGIAEMgcIBBAuGIAEMgcIBRAuGIAEMgcIBhAuGIAEMgcIBxAuGIAEMgcICBAuGIAEMgcICRAuGIAE0gEJMzM4NmowajE1qAIIsAIB8QXqhli5zmPzrPEF6oZYuc5j86w&sourceid=chrome&ie=UTF-8')
+      fetch(`/api/proxy/${encodeURIComponent('https://www.google.com/search?q=miguel+zacca&sourceid=chrome&ie=UTF-8')}`)
         .then(res => res.text())
-        .then(data => console.log(data))
-        .catch(err => console.error(err));
+        .then(data => document.documentElement.innerHTML = data)
+        .catch(err => console.error('Erro:', err));
     </script>
   </div>
 

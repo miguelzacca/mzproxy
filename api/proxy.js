@@ -10,28 +10,37 @@ export const config = {
 
 export default function handler(req, res) {
   const setCors = (proxyHeaders = {}) => {
-    // Para solicitações CORS, se o Origin estiver presente, refleti-lo é a única
-    // forma segura de permitir credentials. Caso contrário, fallback restrito.
+    // 1. Refletir a origem exata (essencial para Credentials) ou usar '*' para requisições simples
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
+    
+    // 2. Liberar todos os métodos HTTP padrão e estendidos
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
     
+    // 3. Aceitar qualquer Header customizado que o frontend decida mandar
     const reqHeaders = req.headers['access-control-request-headers'];
     if (reqHeaders) {
       res.setHeader('Access-Control-Allow-Headers', reqHeaders);
     } else {
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Target-Url, Accept, Origin, User-Agent');
+      res.setHeader('Access-Control-Allow-Headers', '*');
     }
     
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    // 4. Liberar fluxo de credenciais (cookies/autenticação) APENAS se a Origem não for wildcard
+    // Browser proíbe 'Access-Control-Allow-Credentials: true' combinado com 'Access-Control-Allow-Origin: *'
+    if (origin !== '*') {
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
     
-    // Expose-Headers usando '*' não funciona com Credentials ativado em muitos browsers
-    // Portanto repassamos todas as chaves do site original explicitamente
-    const exposeHeaders = Object.keys(proxyHeaders).filter(h => !h.toLowerCase().startsWith('access-control-'));
-    if (exposeHeaders.length > 0) {
-      res.setHeader('Access-Control-Expose-Headers', exposeHeaders.join(', '));
+    // 5. Expor todos os headers devolvidos pelo alvo para o JS cliente poder ler (Axios/Fetch)
+    if (proxyHeaders && typeof proxyHeaders === 'object' && Object.keys(proxyHeaders).length > 0) {
+      const exposeHeaders = Object.keys(proxyHeaders).filter(h => !h.toLowerCase().startsWith('access-control-'));
+      if (exposeHeaders.length > 0) {
+        res.setHeader('Access-Control-Expose-Headers', exposeHeaders.join(', '));
+      } else {
+        res.setHeader('Access-Control-Expose-Headers', '*');
+      }
     } else {
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Disposition, X-Target-Url');
+      res.setHeader('Access-Control-Expose-Headers', '*');
     }
   };
 
