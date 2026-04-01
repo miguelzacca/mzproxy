@@ -98,15 +98,34 @@ export default function handler(req, res) {
   
   // Preservar todos os headers (inclusive customizados como spotify-app-version), pulando apenas os denunciantes
   for (const key in req.headers) {
-    if (!skipReqHeaders.has(key.toLowerCase())) {
-        outHeaders[key] = req.headers[key];
+    const lowerKey = key.toLowerCase();
+    if (
+      skipReqHeaders.has(lowerKey) || 
+      lowerKey.startsWith('x-forwarded-') || 
+      lowerKey.startsWith('x-vercel-') || 
+      lowerKey.startsWith('x-middleware-') ||
+      lowerKey === 'x-real-ip' || 
+      lowerKey === 'forwarded' ||
+      lowerKey === 'connection' ||
+      lowerKey === 'keep-alive'
+    ) {
+        continue;
     }
+    outHeaders[key] = req.headers[key];
   }
 
   outHeaders['Host'] = targetUrl.host;
-  outHeaders['Accept-Encoding'] = 'identity'; // Necessário para não compactar HTML/CSS e podermos manipular
+  
+  // WAFs bloqueiam requisições de API (JSON, eventos) sem compressão suportada.
+  // Somente HTML e CSS precisamos manipular, então forçamos 'identity' apenas neles.
+  const acceptHeader = req.headers['accept'] || '';
+  if (acceptHeader.includes('text/html') || acceptHeader.includes('text/css')) {
+     outHeaders['Accept-Encoding'] = 'identity';
+  } else {
+     outHeaders['Accept-Encoding'] = req.headers['accept-encoding'] || 'gzip, deflate, br';
+  }
 
-  // Para POST/PUT/PATCH, finge ser do site para o CORS e CSRF do Spotify
+  // Para POST/PUT/PATCH, finge ser do site original para o CORS e CSRF
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const fakeOrigin = targetUrl.protocol + '//' + targetUrl.hostname;
     outHeaders['Origin'] = fakeOrigin;
@@ -117,6 +136,7 @@ export default function handler(req, res) {
 
   const options = {
     hostname: targetUrl.hostname,
+    servername: targetUrl.hostname, // Exigido para evitar quedas em APIs rigorosas com SNI
     port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
     path: rawPath,
     method: req.method,
@@ -228,6 +248,9 @@ export default function handler(req, res) {
                     args[1].headers = resource.headers;
                     args[1].mode = resource.mode;
                     args[1].credentials = resource.credentials;
+                    if (resource.method !== 'GET' && resource.method !== 'HEAD') {
+                        args[1].body = resource.body; // Evita perder payloads de POST/PUT
+                    }
                   }
                 }
                 return originalFetch.apply(this, args);
@@ -247,6 +270,45 @@ export default function handler(req, res) {
                 }
                 return originalOpen.apply(this, args);
               };
+
+              // Intercept ServiceWorker
+              if (navigator.serviceWorker && navigator.serviceWorker.register) {
+                const originalRegister = navigator.serviceWorker.register;
+                navigator.serviceWorker.register = function(scriptURL, options) {
+                  if (typeof scriptURL === 'string') {
+                    scriptURL = rewriteUrl(scriptURL);
+                  } else if (scriptURL instanceof URL) {
+                    scriptURL = rewriteUrl(scriptURL.toString());
+                  }
+                  return originalRegister.call(this, scriptURL, options);
+                };
+              }
+
+              // Intercept History API (Impede SPA de vazar a rota do browser localmente)
+              const originalPushState = history.pushState;
+              history.pushState = function() {
+                  let args = Array.prototype.slice.call(arguments);
+                  if (args[2]) args[2] = rewriteUrl(args[2].toString());
+                  return originalPushState.apply(this, args);
+              };
+              const originalReplaceState = history.replaceState;
+              history.replaceState = function() {
+                  let args = Array.prototype.slice.call(arguments);
+                  if (args[2]) args[2] = rewriteUrl(args[2].toString());
+                  return originalReplaceState.apply(this, args);
+              };
+
+              // Intercept Clicks Dynamically (Pega links inseridos via JS depois do load e reescreve no clique)
+              window.addEventListener('click', function(e) {
+                  const target = e.target.closest('a');
+                  if (target && target.getAttribute('href')) {
+                     const href = target.getAttribute('href');
+                     if (!href.startsWith('data:') && !href.startsWith('javascript:') && !href.startsWith('#') && !href.includes('/api/proxy?url=')) {
+                        target.setAttribute('href', rewriteUrl(href));
+                     }
+                  }
+              }, true);
+
             })();
           </script>
           `;
