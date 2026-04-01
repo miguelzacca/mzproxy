@@ -4,6 +4,10 @@ import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { createCursor } from 'ghost-cursor';
 
+// Para contornar bugs do bundler da Vercel que deleta plugins dinâmicos
+import 'puppeteer-extra-plugin-user-preferences';
+import 'puppeteer-extra-plugin-user-data-dir';
+
 // 1. Instanciar o puppeteer-extra conectando ao puppeteer-core compatível com Vercel
 const puppeteer = addExtra(puppeteerCore);
 
