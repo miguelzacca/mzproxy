@@ -2,8 +2,8 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(?<url>http.*)",
-      "destination": "/api/proxy?url=$url"
+      "source": "/api/proxy/:url(.*)",
+      "destination": "/api/proxy?url=:url"
     }
   ]
 }
