@@ -86,6 +86,13 @@
       &nbsp;&nbsp;}<br>
       })
     </div>
+
+    <script>
+      fetch('/api/proxy/https://www.google.com/search?q=miguel+zacca&oq=miguel+zacca&gs_lcrp=EgZjaHJvbWUqCAgAEEUYJxg7MggIABBFGCcYOzIHCAEQLhiABDIGCAIQIxgnMgcIAxAuGIAEMgcIBBAuGIAEMgcIBRAuGIAEMgcIBhAuGIAEMgcIBxAuGIAEMgcICBAuGIAEMgcICRAuGIAE0gEJMzM4NmowajE1qAIIsAIB8QXqhli5zmPzrPEF6oZYuc5j86w&sourceid=chrome&ie=UTF-8')
+        .then(res => res.text())
+        .then(data => console.log(data))
+        .catch(err => console.error(err));
+    </script>
   </div>
 
 

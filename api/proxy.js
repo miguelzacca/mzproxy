@@ -30,16 +30,27 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Extração robusta da URL. Como o Vercel junta os Query Params após um rewrite (ex: /https://site.com?id=5 vira ?url=https://site.com&id=5),
-  // buscamos diretamente na req.url original para não perdermos nenhuma parte depois do '&' !
+  // Reconstrução Impecável: o Vercel joga a "sua URL" em req.query.url, e todas as suas querystrings
+  // originais (ex: ?q=miguel) ele separa no próprio req.query (como { q: 'miguel', sourceid: 'chrome' }).
   let targetUrlStr = req.headers['x-target-url'];
   
-  if (!targetUrlStr && req.url) {
-    const urlMatch = req.url.match(/[?&]url=(.*)/);
-    if (urlMatch) {
-      targetUrlStr = decodeURIComponent(urlMatch[1]);
-    } else {
-      targetUrlStr = req.query?.url;
+  if (!targetUrlStr && req.query?.url) {
+    targetUrlStr = req.query.url;
+    const params = [];
+    for (const key in req.query) {
+      if (key !== 'url') {
+        const val = req.query[key];
+        if (Array.isArray(val)) {
+          val.forEach(v => params.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`));
+        } else {
+          params.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
+        }
+      }
+    }
+    if (params.length > 0) {
+      // Se a URL do host original magicamente já tiver um '?', adicionamos um '&', senão '?'. 
+      const separator = targetUrlStr.includes('?') ? '&' : '?';
+      targetUrlStr += separator + params.join('&');
     }
   }
 
@@ -109,18 +120,18 @@ export default function handler(req, res) {
         return;
       }
 
-      // Reescreve a header de location para redirecionamentos automáticos passarem pelo proxy
+      // Reescreve a header de location para redirecionamentos automáticos passarem pelo novo formato de rota do lado do cliente
       if (lowerKey === 'location') {
         const locationUrl = proxyRes.headers[key];
         try {
           if (locationUrl.startsWith('/')) {
             const absoluteLocation = new URL(locationUrl, targetUrl.origin).href;
-            res.setHeader('location', `/api/proxy?url=${encodeURIComponent(absoluteLocation)}`);
+            res.setHeader('location', `/api/proxy/${absoluteLocation}`);
           } else {
-            res.setHeader('location', `/api/proxy?url=${encodeURIComponent(locationUrl)}`);
+            res.setHeader('location', `/api/proxy/${locationUrl}`);
           }
         } catch(e) {
-          res.setHeader('location', `/api/proxy?url=${encodeURIComponent(locationUrl)}`);
+          res.setHeader('location', `/api/proxy/${locationUrl}`);
         }
         return;
       }
