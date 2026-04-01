@@ -54,6 +54,12 @@ export default function handler(req, res) {
     }
   }
 
+  // 🔥 CRÍTICO: Alguns roteadores e browsers acham que "https://" no meio de uma URL na verdade é uma pasta dupla "//"
+  // e simplificam para "https:/", quebrando qualquer comunicação (Google joga pra tela de /sorry). Isso normaliza as barras.
+  if (targetUrlStr) {
+    targetUrlStr = targetUrlStr.replace(/^(https?):\/+([^/])/, '$1://$2');
+  }
+
   if (!targetUrlStr) {
     setCors();
     return res.status(400).json({ error: 'URL de destino ausente na query (?url=) ou no header x-target-url' });
@@ -80,22 +86,40 @@ export default function handler(req, res) {
   };
 
   // 🛡️ Limpeza agressiva de headers originais para burlar WAF, CORS e Cloudflare
-  delete options.headers.host;
-  delete options.headers['x-target-url'];
-  delete options.headers['x-forwarded-for'];
-  delete options.headers['x-vercel-forwarded-for'];
-  delete options.headers['x-forwarded-proto'];
-  delete options.headers['x-forwarded-host'];
-  delete options.headers['x-real-ip'];
-  delete options.headers['connection'];
+  // 🛡️ Limpeza agressiva: o Vercel e outros CDNs enfiam dezenas de headers como "x-vercel-id"
+  // que gritam "sOU UM SCRIPT HOSPEDADO" pro Google. Precisamos vaporizar TODOS ELES.
+  Object.keys(options.headers).forEach(key => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.startsWith('x-') || lowerKey.startsWith('forwarded') || lowerKey.startsWith('via')) {
+      delete options.headers[key];
+    }
+  });
   
-  // 🎭 Spoofing - fazendo-se passar pela própria origem do alvo
+  delete options.headers.host;
+  delete options.headers.connection;
+  // 🎭 Spoofing Absoluto - Camuflagem pra parecer um Humano e não um bot de Data Center ou Fetch JS
   options.headers.host = targetUrl.host;
-  options.headers.origin = targetUrl.origin;
+  
+  // WAFs (como o Google) banem requisições GET padrão que contém Origin (sinal clássico de bot fetch()/CORS)
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    options.headers.origin = targetUrl.origin;
+  } else {
+    delete options.headers.origin;
+  }
   options.headers.referer = targetUrl.origin + '/';
   
-  // Se não existir, configura um User-Agent moderno padrão
-  if (!options.headers['user-agent']) {
+  // Apaga os rastros biológicos explícitos de Fetch API pra forçar a imagem de Navigation Document
+  delete options.headers['sec-fetch-dest'];
+  delete options.headers['sec-fetch-mode'];
+  delete options.headers['sec-fetch-site'];
+  delete options.headers['sec-fetch-user'];
+  
+  // Injeta headers perfeitos de navegador de verdade (impossível o Google/Cloudflare diferir de uma pessoa real usando Chrome)
+  options.headers['accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8';
+  options.headers['accept-language'] = options.headers['accept-language'] || 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7';
+  
+  // Tranca o User-Agent em cima da sua versão moderna pra garantir navegação lisa
+  if (!options.headers['user-agent'] || options.headers['user-agent'].includes('undici') || options.headers['user-agent'].includes('node')) {
     options.headers['user-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
   }
 
