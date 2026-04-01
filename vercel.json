@@ -6,12 +6,23 @@
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH" }
       ]
+    },
+    {
+      "source": "/api/scrape/:path(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH" }
+      ]
     }
   ],
   "rewrites": [
     {
       "source": "/api/proxy/:url(.*)",
       "destination": "/api/proxy?url=:url"
+    },
+    {
+      "source": "/api/scrape/:url(.*)",
+      "destination": "/api/scrape?url=:url"
     }
   ]
 }

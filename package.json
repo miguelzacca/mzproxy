@@ -3,5 +3,12 @@
   "version": "1.0.0",
   "description": "Proxy any request",
   "main": "api/proxy.js",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@sparticuz/chromium": "^143.0.4",
+    "ghost-cursor": "^1.4.2",
+    "puppeteer-core": "^24.40.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
 }
