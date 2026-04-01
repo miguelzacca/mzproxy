@@ -30,8 +30,18 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Obter URL alvo via query string ou header
-  const targetUrlStr = req.query.url || req.headers['x-target-url'];
+  // Extração robusta da URL. Como o Vercel junta os Query Params após um rewrite (ex: /https://site.com?id=5 vira ?url=https://site.com&id=5),
+  // buscamos diretamente na req.url original para não perdermos nenhuma parte depois do '&' !
+  let targetUrlStr = req.headers['x-target-url'];
+  
+  if (!targetUrlStr && req.url) {
+    const urlMatch = req.url.match(/[?&]url=(.*)/);
+    if (urlMatch) {
+      targetUrlStr = decodeURIComponent(urlMatch[1]);
+    } else {
+      targetUrlStr = req.query?.url;
+    }
+  }
 
   if (!targetUrlStr) {
     setCors();
