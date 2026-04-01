@@ -86,6 +86,24 @@
       &nbsp;&nbsp;}<br>
       })
     </div>
+
+    <br><hr style="border-color:#43aa8b44; margin: 2rem 0;"><br>
+
+    <h2>🎭 Web Scraper Anti-Bot</h2>
+    <p style="text-align: left;">
+      Utilize o endpoint <strong>/api/proxy/scrape</strong> para baixar sites com renderização completa (JavaScript), contornando bloqueios avançados (Cloudflare, Akamai etc.) utilizando Chromium Headless, Stealth Plugins e simulação de cursor fantasma.
+    </p>
+
+    <div class="code-block">
+      <span class="method" style="background:#e94560; color:#fff;">GET</span> /api/proxy/scrape/https://www.site-protegido.com/
+    </div>
+
+    <div class="code-block" style="color: #43aa8b;">
+      // Exemplo rápido:<br>
+      const res = await fetch('/api/proxy/scrape/' + encodeURIComponent('https://www.zoom.com.br'));<br>
+      const htmlCompleto = await res.text();
+    </div>
+
   </div>
 
 
