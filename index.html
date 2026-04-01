@@ -86,14 +86,12 @@
       &nbsp;&nbsp;}<br>
       })
     </div>
+
+    <a href="/api/proxy?url=https://www.google.com">Google</a>
+    <a href="/api/proxy?url=https://www.open.spotify.com">Spotify</a>
   </div>
 
-  <script>
-    fetch('/api/proxy?url=https://google.com')
-      .then(response => response.text())
-      .then(data => console.log(data))
-      .catch(error => console.error(error));
-  </script>
+
 </body>
 
 </html>

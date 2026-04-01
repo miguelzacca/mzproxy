@@ -3,8 +3,5 @@
   "version": "1.0.0",
   "description": "Proxy any request",
   "main": "api/proxy.js",
-  "type": "module",
-  "dependencies": {
-    "http-proxy": "^1.18.1"
-  }
+  "type": "module"
 }
