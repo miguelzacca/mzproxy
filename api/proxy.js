@@ -54,7 +54,7 @@ export default function handler(req, res) {
   let targetUrlStr = req.headers['x-target-url'];
   
   if (!targetUrlStr && req.query?.url) {
-    targetUrlStr = req.query.url;
+    targetUrlStr = Array.isArray(req.query.url) ? req.query.url[0] : req.query.url;
     const params = [];
     for (const key in req.query) {
       if (key !== 'url') {
@@ -169,12 +169,12 @@ export default function handler(req, res) {
         try {
           if (locationUrl.startsWith('/')) {
             const absoluteLocation = new URL(locationUrl, targetUrl.origin).href;
-            res.setHeader('location', `/api/proxy/${absoluteLocation}`);
+            res.setHeader('location', `/api/proxy/${encodeURIComponent(absoluteLocation)}`);
           } else {
-            res.setHeader('location', `/api/proxy/${locationUrl}`);
+            res.setHeader('location', `/api/proxy/${encodeURIComponent(locationUrl)}`);
           }
         } catch(e) {
-          res.setHeader('location', `/api/proxy/${locationUrl}`);
+          res.setHeader('location', `/api/proxy/${encodeURIComponent(locationUrl)}`);
         }
         return;
       }
